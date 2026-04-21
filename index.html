@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>デジタル勤怠管理 at D-WEB</title>
+    <style>
+        /* 全局样式（与原始版本完全相同） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "メイリオ", "Meiryo", "游ゴシック", "Yu Gothic", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f7f7f7;
+        }
+
+        .app-container {
+            height: 100vh;
+            box-shadow: 0 0 12px rgba(0,0,0,0.08);
+        }
+
+        .custom-titlebar {
+            height: 54px;
+            background-color: #0d4c8b;
+            color: #ffffff;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #0a3d70;
+            cursor: move;
+        }
+        .title-text {
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        .title-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .lang-select {
+            padding: 4px 8px;
+            background-color: #1a5ca8;
+            color: white;
+            border: 1px solid #0f4b8a;
+            border-radius: 2px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .close-btn {
+            width: 26px;
+            height: 26px;
+            background-color: #e64a4a;
+            border: 1px solid #d33a3a;
+            color: white;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+        .close-btn:hover {
+            background-color: #d33a3a;
+        }
+        .fullscreen-btn {
+            width: 26px;
+            height: 26px;
+            background-color: #1a5ca8;
+            border: 1px solid #0f4b8a;
+            color: white;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+        .fullscreen-btn:hover {
+            background-color: #0f4b8a;
+        }
+
+        .content-container {
+            display: flex;
+            height: calc(100vh - 54px);
+        }
+
+        .sidebar {
+            width: 190px;
+            background-color: #333f50;
+            border-right: 1px solid #2a3645;
+        }
+        .sidebar-item {
+            padding: 15px 20px 15px 28px;
+            position: relative;
+            cursor: pointer;
+            font-size: 14px;
+            color: #e6e6e6;
+            background: linear-gradient(to bottom, #3a4a5d 0%, #333f50 100%);
+            border-top: 1px solid #455569;
+            border-bottom: 1px solid #2a3645;
+            transition: all 0.2s;
+        }
+        .sidebar-item:hover {
+            background: linear-gradient(to bottom, #405065 0%, #384658 100%);
+            color: #ffffff;
+        }
+        .sidebar-item.active {
+            background: linear-gradient(to bottom, #4a607c 0%, #425671 100%);
+            color: #ffffff;
+            border-left: 3px solid #3d7bc8;
+        }
+        .sidebar-item::after {
+            content: "＞";
+            position: absolute;
+            right: 20px;
+            font-size: 11px;
+            color: #c0c0c0;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 35px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fafafa;
+            overflow-y: auto;
+        }
+        .time-display {
+            font-size: 46px;
+            color: #3a3a3a;
+            margin-bottom: 15px;
+            font-weight: 300;
+            letter-spacing: 1.2px;
+        }
+        .date-display {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 45px;
+        }
+        .status-display {
+            font-size: 18px;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            background-color: #e8f4f8;
+            color: #2c6e91;
+            display: none;
+        }
+        .status-display.visible {
+            display: block;
+        }
+        .button-container {
+            width: 75%;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            row-gap: 22px;
+            column-gap: 40px;
+            margin-bottom: 50px;
+        }
+        .action-btn {
+            padding: 19px 0;
+            font-size: 17px;
+            background-color: #3d7bc8;
+            color: #ffffff;
+            border: 1px solid #346cb0;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .action-btn:hover {
+            background-color: #346cb0;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.12);
+        }
+        .action-btn:active {
+            box-shadow: inset 0 2px 2px rgba(0,0,0,0.15);
+        }
+        .action-btn:disabled {
+            background-color: #b3c5d9;
+            border-color: #a0b6cc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .action-btn#shukkin,
+        .action-btn#taikin {
+            padding: 48px 0;
+            font-size: 25px;
+            background-color: #2d62b3;
+            border: 1px solid #265499;
+        }
+        .action-btn#shukkin:hover,
+        .action-btn#taikin:hover {
+            background-color: #265499;
+        }
+        .action-btn#shukkin:disabled,
+        .action-btn#taikin:disabled {
+            background-color: #b3c5d9;
+            border-color: #a0b6cc;
+        }
+
+        .record-section {
+            width: 75%;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .record-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .record-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .record-date {
+            color: #666;
+        }
+        .record-type {
+            color: #333;
+            font-weight: 500;
+        }
+        .record-time {
+            color: #3d7bc8;
+        }
+
+        /* 页面容器 */
+        .page {
+            display: none;
+            width: 100%;
+            padding: 0 30px;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* ===== 日历样式 ===== */
+        .calendar-container {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .calendar-header button {
+            background-color: #3d7bc8;
+            color: white;
+            border: 1px solid #346cb0;
+            border-radius: 3px;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .calendar-header button:hover {
+            background-color: #346cb0;
+        }
+        .calendar-year-month {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #666;
+            font-size: 13px;
+        }
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            background-color: #f9f9f9;
+        }
+        .calendar-day:hover {
+            background-color: #e0e0e0 !important;
+        }
+        .calendar-day.selected {
+            background-color: #3d7bc8 !important;
+            color: white;
+            border-color: #346cb0;
+        }
+        .calendar-day.today {
+            border: 1px solid #3d7bc8;
+            font-weight: bold;
+        }
+        .calendar-day.empty {
+            background-color: transparent;
+            cursor: default;
+        }
+        .calendar-day.empty:hover {
+            background-color: transparent;
+        }
+
+        .records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .show-all-btn {
+            padding: 4px 12px;
+            background-color: #3d7bc8;
+            color: white;
+            border: 1px solid #346cb0;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .show-all-btn:hover {
+            background-color: #346cb0;
+        }
+
+        /* 模态窗口通用样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s linear 0.25s, opacity 0.25s;
+        }
+        .modal-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+            transition-delay: 0s;
+        }
+        .modal {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            padding: 24px;
+        }
+        .modal-title {
+            font-size: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .modal-message {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .modal-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .modal-btn.primary {
+            background-color: #3d7bc8;
+            color: white;
+        }
+        .modal-btn.primary:hover {
+            background-color: #346cb0;
+        }
+        .modal-btn.secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .modal-btn.secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        .modal-title.warning {
+            color: #d33a3a;
+        }
+        .modal-title.confirm {
+            color: #2d62b3;
+        }
+
+        /* ===== 休假一览页面样式 ===== */
+        .holiday-page-content {
+            width: 100%;
+            padding: 20px 30px 0;
+            display: flex;
+            gap: 24px;
+            align-items: stretch;
+            box-sizing: border-box;
+        }
+        .holiday-calendar-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            padding: 20px 24px;
+            flex: 0 0 auto;
+            width: 340px;
+        }
+        .holiday-calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .holiday-calendar-header button {
+            background-color: #3d7bc8;
+            color: white;
+            border: 1px solid #346cb0;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .holiday-calendar-header button:hover {
+            background-color: #346cb0;
+        }
+        .holiday-calendar-year-month {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .holiday-calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #888;
+            font-size: 12px;
+        }
+        .holiday-calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+        .holiday-calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+            background-color: transparent;
+        }
+        .holiday-calendar-day:hover {
+            background-color: #e8f0fe !important;
+        }
+        .holiday-calendar-day.empty {
+            background-color: transparent;
+            cursor: default;
+        }
+        .holiday-calendar-day.empty:hover {
+            background-color: transparent;
+        }
+        .holiday-calendar-day.holiday {
+            background-color: #fde8e8 !important;
+            color: #c0392b;
+            font-weight: 600;
+        }
+        .holiday-calendar-day.saturday {
+            color: #1565c0;
+        }
+        .holiday-calendar-day.sunday {
+            color: #c0392b;
+        }
+        .holiday-calendar-day.today {
+            border: 2px solid #3d7bc8;
+            font-weight: 700;
+        }
+        .holiday-list-section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            padding: 20px 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .holiday-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .holiday-list-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .holiday-list-count {
+            font-size: 12px;
+            color: #888;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .holiday-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 360px;
+        }
+        .holiday-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        .holiday-item:last-child {
+            border-bottom: none;
+        }
+        .holiday-date {
+            color: #888;
+            font-size: 12px;
+        }
+        .holiday-name {
+            color: #333;
+            font-weight: 500;
+        }
+        .holiday-name.preset {
+            color: #c0392b;
+            font-weight: 600;
+        }
+        .add-holiday-btn {
+            margin-top: 16px;
+            padding: 10px 16px;
+            background-color: #3d7bc8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+        .add-holiday-btn:hover {
+            background-color: #346cb0;
+        }
+        .delete-holiday-btn {
+            background-color: #fde8e8 !important;
+            color: #c0392b !important;
+            border: 1px solid #f5c6c6 !important;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s;
+        }
+        .delete-holiday-btn:hover {
+            background-color: #fde8e8;
+            border-color: #c0392b;
+        }
+
+        /* ===== 布局设置页面样式 ===== */
+        .settings-page-content {
+            width: 100%;
+            padding: 0 30px;
+        }
+        .settings-section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .settings-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+        .settings-section-desc {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+        .layout-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .layout-option {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .layout-option:hover {
+            border-color: #3d7bc8;
+        }
+        .layout-option.selected {
+            border-color: #3d7bc8;
+            background-color: #f0f4ff;
+        }
+        .layout-option.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            color: #3d7bc8;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .layout-preview {
+            background: #f5f5f5;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .layout-option-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .layout-option-desc {
+            font-size: 12px;
+            color: #888;
+        }
+        .preview-sidebar-layout {
+            display: flex;
+            height: 80px;
+        }
+        .preview-sidebar {
+            width: 30%;
+            background: #333f50;
+        }
+        .preview-main-a {
+            flex: 1;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+        }
+        .preview-content-a {
+            width: 80%;
+            height: 50%;
+            background: #ddd;
+            border-radius: 3px;
+        }
+        .preview-topbar-layout {
+            display: flex;
+            flex-direction: column;
+            height: 80px;
+        }
+        .preview-topbar {
+            height: 22px;
+            background: #333f50;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 4px;
+        }
+        .preview-tab {
+            height: 14px;
+            width: 28px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 2px;
+        }
+        .preview-tab.active {
+            background: rgba(255,255,255,0.35);
+        }
+        .preview-main-b {
+            flex: 1;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+        }
+        .preview-content-b {
+            width: 80%;
+            height: 50%;
+            background: #ddd;
+            border-radius: 3px;
+        }
+        .preview-practical-layout {
+            display: flex;
+            height: 80px;
+        }
+        .preview-sidebar-practical {
+            width: 25%;
+            background: #2C2C2C;
+        }
+        .preview-main-practical {
+            flex: 1;
+            background: #F5F5F5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            gap: 8px;
+        }
+        .preview-clock {
+            width: 50px;
+            height: 10px;
+            background: #ccc;
+            border-radius: 2px;
+        }
+        .preview-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px 6px;
+            width: 75%;
+        }
+        .preview-btn-large {
+            background: #BCC6D3;
+            border-radius: 2px;
+            height: 20px;
+        }
+        .preview-btn-small {
+            background: #BCC6D3;
+            border-radius: 2px;
+            height: 10px;
+        }
+        /* ===== 实用模式首页样式 ===== */
+        .app-container.layout-practical .main-content {
+            background-color: #fafafa;
+            padding: 35px 0 0;
+        }
+        .app-container.layout-practical #page_main.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 45px 0 0;
+            width: 100%;
+            transform: scale(0.95);
+            transform-origin: top center;
+        }
+        .app-container.layout-practical .time-display {
+            font-size: 46px;
+            color: #3a3a3a;
+            margin-bottom: 25px;
+            font-weight: 400;
+            letter-spacing: 1.2px;
+        }
+        .app-container.layout-practical .date-display {
+            display: none;
+        }
+        .app-container.layout-practical .status-display {
+            display: none;
+        }
+        .app-container.layout-practical .button-container {
+            width: auto;
+            display: grid;
+            grid-template-columns: repeat(2, 300px);
+            align-items: center;
+            row-gap: 27px;
+            column-gap: 55px;
+            margin-bottom: 0;
+        }
+        .app-container.layout-practical .action-btn {
+            padding: 19px 0;
+            font-size: 17px;
+            background-color: #3d7bc8;
+            color: #ffffff;
+            border: 1px solid #346cb0;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .app-container.layout-practical .action-btn:hover {
+            background-color: #346cb0;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.12);
+        }
+        .app-container.layout-practical .action-btn:active {
+            box-shadow: inset 0 2px 2px rgba(0,0,0,0.15);
+        }
+        .app-container.layout-practical .action-btn:disabled {
+            background-color: #b3c5d9;
+            border-color: #a0b6cc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .app-container.layout-practical .action-btn#shukkin,
+        .app-container.layout-practical .action-btn#taikin {
+            padding: 50px 0;
+            font-size: 35px;
+            background-color: #2d62b3;
+            border: 1px solid #265499;
+        }
+        .app-container.layout-practical .action-btn#shukkin:hover,
+        .app-container.layout-practical .action-btn#taikin:hover {
+            background-color: #346cb0;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.12);
+        }
+        .app-container.layout-practical .action-btn#shukkin:disabled,
+        .app-container.layout-practical .action-btn#taikin:disabled {
+            background-color: #b3c5d9;
+            border-color: #a0b6cc;
+        }
+        .app-container.layout-practical .record-section {
+            display: none;
+        }
+
+
+        /* ===== 数据看板页面样式 ===== */
+        .dashboard-page-content {
+            width: 100%;
+            padding: 0 30px;
+        }
+        .dashboard-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2d62b3;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+        }
+        .stat-card.alert .stat-value {
+            color: #d33a3a;
+        }
+        .stat-card.warning .stat-value {
+            color: #e65100;
+        }
+        .dashboard-section {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .dashboard-section .section-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .week-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 120px;
+            padding-top: 10px;
+        }
+        .week-bar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .week-bar {
+            width: 36px;
+            background: linear-gradient(to top, #3d7bc8, #5a9bd5);
+            border-radius: 3px 3px 0 0;
+            min-height: 4px;
+            transition: height 0.3s ease;
+        }
+        .week-bar-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .week-bar-value {
+            font-size: 11px;
+            color: #999;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 14px;
+        }
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+        .summary-row .label {
+            color: #666;
+        }
+        .summary-row .value {
+            color: #333;
+            font-weight: 500;
+        }
+        .overtime-bar {
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .overtime-bar-fill {
+            height: 100%;
+            background: linear-gradient(to right, #4caf50, #8bc34a);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 标题栏 -->
+        <div class="custom-titlebar" id="titlebar">
+            <div class="title-text" data-i18n="app_title">デジタル勤怠管理 at D-WEB</div>
+            <div class="title-actions">
+                <select class="lang-select" id="langSelect">
+                    <option value="ja">日本語</option>
+                    <option value="zh">中文</option>
+                </select>
+                <button class="fullscreen-btn" id="fullscreenBtn">⛶</button>
+                <button class="close-btn" id="closeBtn">×</button>
+            </div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="content-container">
+            <div class="sidebar">
+                <div class="sidebar-item active" data-page="main" data-i18n="sidebar_main">ページ</div>
+                <div class="sidebar-item" data-page="records" data-i18n="sidebar_records">勤簿</div>
+                <div class="sidebar-item" data-page="holidays" data-i18n="sidebar_holidays">休暇一覧</div>
+                <div class="sidebar-item" data-page="applications" data-i18n="sidebar_applications">申請</div>
+                <div class="sidebar-item" data-page="dashboard" data-i18n="sidebar_dashboard">ダッシュボード</div>
+                <div class="sidebar-item" data-page="settings" data-i18n="sidebar_settings">レイアウト設定</div>
+            </div>
+
+            <!-- 主页面 -->
+            <div class="main-content">
+                <div class="page active" id="page_main">
+                    <div class="time-display" id="time">16:03:03</div>
+                    <div class="date-display" id="date">2023年10月15日 月曜日</div>
+                    <div class="status-display" id="statusDisplay"></div>
+                    <div class="button-container">
+                        <button class="action-btn" id="shukkin" data-i18n="btn_attend">出勤</button>
+                        <button class="action-btn" id="taikin" data-i18n="btn_leave" disabled>退勤</button>
+                        <button class="action-btn" id="kyukeiStart" data-i18n="btn_break_start" disabled>休憩開始</button>
+                        <button class="action-btn" id="kyukeiEnd" data-i18n="btn_break_end" disabled>休憩終了</button>
+                        <button class="action-btn" id="chikoku" data-i18n="btn_late">遅刻</button>
+                        <button class="action-btn" id="soutai" data-i18n="btn_early_leave">早退</button>
+                    </div>
+
+                    <div class="record-section">
+                        <div class="section-title" data-i18n="today_records">今日の記録</div>
+                        <div class="record-list" id="todayRecords">
+                            <!-- 记录将通过JS动态添加 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 勤簿页面（包含日历） -->
+                <div class="page" id="page_records">
+                    <div class="section-title" data-i18n="all_records">全ての勤務記録</div>
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            <button class="calendar-prev" id="calendarPrev">‹</button>
+                            <span class="calendar-year-month" id="calendarYearMonth"></span>
+                            <button class="calendar-next" id="calendarNext">›</button>
+                        </div>
+                        <div class="calendar-weekdays" id="calendarWeekdays"></div>
+                        <div class="calendar-days" id="calendarDays"></div>
+                    </div>
+                    <div class="records-header">
+                        <span class="records-title" id="recordsTitle" data-i18n="all_records">全ての勤務記録</span>
+                        <button class="show-all-btn" id="showAllBtn" style="display: none;">全て表示</button>
+                    </div>
+                    <div class="record-list" id="allRecords"></div>
+                </div>
+
+                <!-- 其他页面占位 -->
+                <div class="page" id="page_holidays">
+                    <div class="section-title" data-i18n="holiday_list">休暇一覧</div>
+                    <div class="holiday-page-content">
+                        <div class="holiday-calendar-container">
+                            <div class="holiday-calendar-header">
+                                <button class="holiday-calendar-prev" id="holidayCalendarPrev">‹</button>
+                                <span class="holiday-calendar-year-month" id="holidayCalendarYearMonth"></span>
+                                <button class="holiday-calendar-next" id="holidayCalendarNext">›</button>
+                            </div>
+                            <div class="holiday-calendar-weekdays" id="holidayCalendarWeekdays"></div>
+                            <div class="holiday-calendar-days" id="holidayCalendarDays"></div>
+                        </div>
+                        <div class="holiday-list-section">
+                            <div class="holiday-list-header">
+                                <span class="holiday-list-title" data-i18n="holiday_list_title">休暇リスト</span>
+                                <span class="holiday-list-count" id="holidayCount"></span>
+                            </div>
+                            <div class="holiday-list" id="holidayList"></div>
+                            <button class="add-holiday-btn" id="addHolidayBtn" data-i18n="btn_add_holiday">休假を追加</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="page" id="page_applications">
+                    <div class="section-title" data-i18n="applications">申請</div>
+                    <div data-i18n="application_placeholder">申請履歴がありません。</div>
+                </div>
+                <div class="page" id="page_dashboard">
+                    <div class="section-title" data-i18n="dashboard">ダッシュボード</div>
+                    <div class="dashboard-page-content">
+                        <div class="dashboard-stats-grid" id="dashboardStatsGrid"></div>
+                        <div class="dashboard-section">
+                            <div class="section-title" data-i18n="dashboard_weekly">週間労働時間</div>
+                            <div class="week-chart" id="weekChart"></div>
+                        </div>
+                        <div class="dashboard-section">
+                            <div class="section-title" data-i18n="dashboard_summary">今月のまとめ</div>
+                            <div class="summary-list" id="summaryList"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page" id="page_settings">
+                    <div class="section-title" data-i18n="settings">設定</div>
+                    <div class="settings-page-content">
+                        <div class="settings-section">
+                            <div class="settings-section-title" data-i18n="settings_layout_title">レイアウト設定</div>
+                            <div class="settings-section-desc" data-i18n="settings_layout_desc">界面布局方案，点击即可切换。</div>
+                            <div class="layout-options">
+                                <div class="layout-option selected" id="layout-option-practical" data-layout="practical">
+                                    <div class="layout-preview">
+                                        <div class="preview-practical-layout">
+                                            <div class="preview-sidebar-practical"></div>
+                                            <div class="preview-main-practical">
+                                                <div class="preview-clock"></div>
+                                                <div class="preview-buttons">
+                                                    <div class="preview-btn-large"></div>
+                                                    <div class="preview-btn-large"></div>
+                                                    <div class="preview-btn-small"></div>
+                                                    <div class="preview-btn-small"></div>
+                                                    <div class="preview-btn-small"></div>
+                                                    <div class="preview-btn-small"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="layout-option-label" data-i18n="layout_practical_title">实用模式</div>
+                                    <div class="layout-option-desc" data-i18n="layout_practical_desc">首页全新设计，适合日常使用</div>
+                                </div>
+                                <div class="layout-option" id="layout-option-sidebar" data-layout="sidebar">
+                                    <div class="layout-preview">
+                                        <div class="preview-sidebar-layout">
+                                            <div class="preview-sidebar"></div>
+                                            <div class="preview-main-a">
+                                                <div class="preview-content-a"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="layout-option-label" data-i18n="layout_sidebar_title">侧边栏模式</div>
+                                    <div class="layout-option-desc" data-i18n="layout_sidebar_desc">导航固定在左侧，适合宽屏</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态窗口：正常退勤警告 -->
+    <div class="modal-overlay" id="leaveWarningModal">
+        <div class="modal">
+            <div class="modal-title warning" data-i18n="leave_warn_title">退勤不可の通知</div>
+            <div class="modal-message" data-i18n="leave_warn_msg">出勤時間が2時間に満たないため、通常退勤できません。<br>早退する場合は「早退」ボタンを使用してください。</div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="closeLeaveWarningModal" data-i18n="modal_ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态窗口：早退确认 -->
+    <div class="modal-overlay" id="earlyLeaveConfirmModal">
+        <div class="modal">
+            <div class="modal-title confirm" data-i18n="early_leave_confirm_title">早退確認</div>
+            <div class="modal-message" id="earlyLeaveMsg" data-i18n="early_leave_confirm_msg">現在の出勤時間は{hour}時間{min}分で、2時間に満たしていません。<br>本当に早退しますか？</div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" id="cancelEarlyLeave" data-i18n="modal_cancel">キャンセル</button>
+                <button class="modal-btn primary" id="confirmEarlyLeave" data-i18n="modal_confirm">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态窗口：添加休假 -->
+    <div class="modal-overlay" id="addHolidayModal">
+        <div class="modal">
+            <div class="modal-title confirm" data-i18n="add_holiday_title">休假を追加</div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:8px;font-size:14px;color:#666;">${'ja' ? '日付' : '日期'}</label>
+                <input type="date" id="holidayDateInput" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:3px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:8px;font-size:14px;color:#666;">${'ja' ? '休假名' : '休假名称'}</label>
+                <input type="text" id="holidayNameInput" placeholder="${'ja' ? '例：誕生日、有給...' : '例：生日、年假...'}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:3px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" id="cancelAddHoliday" data-i18n="modal_cancel">キャンセル</button>
+                <button class="modal-btn primary" id="confirmAddHoliday" data-i18n="modal_confirm">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 国际化文本 ====================
+        const i18n = {
+            ja: {
+                app_title: "デジタル勤怠管理 at D-WEB",
+                sidebar_main: "ページ",
+                sidebar_records: "勤簿",
+                sidebar_holidays: "休暇一覧",
+                sidebar_applications: "申請",
+                sidebar_dashboard: "ダッシュボード",
+                sidebar_settings: "レイアウト設定",
+                btn_attend: "出勤",
+                btn_leave: "退勤",
+                btn_break_start: "休憩開始",
+                btn_break_end: "休憩終了",
+                btn_late: "遅刻",
+                btn_early_leave: "早退",
+                today_records: "今日の記録",
+                all_records: "全ての勤務記録",
+                holiday_list: "休暇一覧",
+                applications: "申請",
+                dashboard: "ダッシュボード",
+                settings: "設定",
+                holiday_placeholder: "休暇データがありません。",
+                application_placeholder: "申請履歴がありません。",
+                dashboard_placeholder: "ダッシュボードデータを表示する場所です。",
+                settings_placeholder: "設定内容を表示する場所です。",
+                status_attended: "出勤記録が完了しました",
+                status_left: "退勤記録が完了しました",
+                status_break_start: "休憩を開始しました",
+                status_break_end: "休憩を終了しました",
+                status_late: "遅刻記録が完了しました",
+                status_early_leave: "早退記録が完了しました",
+                record_attend: "出勤",
+                record_leave: "退勤",
+                record_break_start: "休憩開始",
+                record_break_end: "休憩終了",
+                record_late: "遅刻",
+                record_early_leave: "早退",
+                leave_warn_title: "退勤不可の通知",
+                leave_warn_msg: "出勤時間が2時間に満たないため、通常退勤できません。<br>早退する場合は「早退」ボタンを使用してください。",
+                early_leave_confirm_title: "早退確認",
+                early_leave_confirm_msg: "現在の出勤時間は{hour}時間{min}分で、2時間に満たしていません。<br>本当に早退しますか？",
+                modal_ok: "OK",
+                modal_cancel: "キャンセル",
+                modal_confirm: "確認",
+                weekdays: ['日', '月', '火', '水', '木', '金', '土'],
+                show_all: "全て表示",
+                holiday_list_title: "休暇リスト",
+                btn_add_holiday: "休假を追加",
+                dashboard_weekly: "週間労働時間",
+                dashboard_summary: "今月のまとめ",
+                stat_work_days: "出勤日数",
+                stat_total_hours: "総労働時間",
+                stat_avg_daily: "1日平均",
+                stat_late_count: "迟到回数",
+                stat_early_count: "早退回数",
+                stat_overtime: "残業時間",
+                holiday_added: "休假を追加しました",
+                holiday_deleted: "休假を削除しました",
+                no_holidays: "休假データがありません",
+                settings_layout_title: "レイアウト設定",
+                settings_layout_desc: "界面布局方案，点击即可切换。",
+                layout_sidebar_title: "実用的モード",
+                layout_sidebar_desc: "首页全新设计，适合日常使用",
+                layout_practical_title: "クラシックモード",
+                layout_practical_desc: "传统功能布局，简洁直观"
+            },
+            zh: {
+                app_title: "数字考勤管理 at D-WEB",
+                sidebar_main: "首页",
+                sidebar_records: "考勤记录",
+                sidebar_holidays: "休假一览",
+                sidebar_applications: "申请",
+                sidebar_dashboard: "数据看板",
+                sidebar_settings: "布局设置",
+                btn_attend: "出勤",
+                btn_leave: "退勤",
+                btn_break_start: "开始休息",
+                btn_break_end: "结束休息",
+                btn_late: "迟到",
+                btn_early_leave: "早退",
+                today_records: "今日记录",
+                all_records: "所有考勤记录",
+                holiday_list: "休假一览",
+                applications: "申请",
+                dashboard: "数据看板",
+                settings: "设置",
+                holiday_placeholder: "没有休假数据。",
+                application_placeholder: "没有申请记录。",
+                dashboard_placeholder: "此处将显示数据看板数据。",
+                settings_placeholder: "此处将显示设置内容。",
+                status_attended: "出勤记录已完成",
+                status_left: "退勤记录已完成",
+                status_break_start: "已开始休息",
+                status_break_end: "已结束休息",
+                status_late: "迟到记录已完成",
+                status_early_leave: "早退记录已完成",
+                record_attend: "出勤",
+                record_leave: "退勤",
+                record_break_start: "开始休息",
+                record_break_end: "结束休息",
+                record_late: "迟到",
+                record_early_leave: "早退",
+                leave_warn_title: "无法退勤通知",
+                leave_warn_msg: "由于出勤时间未满2小时，无法正常退勤。<br>如需提前退勤，请使用「早退」按钮。",
+                early_leave_confirm_title: "早退确认",
+                early_leave_confirm_msg: "当前出勤时间为{hour}小时{min}分，未满2小时。<br>确定要早退吗？",
+                modal_ok: "确定",
+                modal_cancel: "取消",
+                modal_confirm: "确认",
+                weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+                show_all: "全部显示",
+                holiday_list_title: "休假列表",
+                btn_add_holiday: "添加休假",
+                dashboard_weekly: "周劳动时间",
+                dashboard_summary: "本月总结",
+                stat_work_days: "出勤天数",
+                stat_total_hours: "总劳动时间",
+                stat_avg_daily: "日均",
+                stat_late_count: "迟到次数",
+                stat_early_count: "早退次数",
+                stat_overtime: "加班时间",
+                holiday_added: "已添加休假",
+                holiday_deleted: "已删除休假",
+                no_holidays: "暂无休假数据",
+                settings_layout_title: "布局设置",
+                settings_layout_desc: "界面布局方案，点击即可切换。",
+                layout_sidebar_title: "实用模式",
+                layout_sidebar_desc: "首页全新设计，适合日常使用",
+                layout_practical_title: "经典模式",
+                layout_practical_desc: "传统功能布局，简洁直观"
+            }
+        };
+
+        // ==================== 全局变量 ====================
+        const MIN_WORK_MINUTES = 120; // 2小时 = 120分钟
+        let selectedDate = null;                      // 当前选中的日期 (YYYY-MM-DD)
+        let currentCalendarDate = {                    // 日历当前显示的年份和月份
+            year: new Date().getFullYear(),
+            month: new Date().getMonth() + 1
+        };
+
+        // ==================== 布局管理 ====================
+        const LAYOUT_KEY = 'appLayout';
+
+        function getLayout() {
+            return localStorage.getItem(LAYOUT_KEY) || 'practical';
+        }
+
+        function applyLayout(layout) {
+            const appContainer = document.querySelector('.app-container');
+            appContainer.classList.remove('layout-sidebar', 'layout-practical');
+            appContainer.classList.add(`layout-${layout}`);
+            localStorage.setItem(LAYOUT_KEY, layout);
+            document.querySelectorAll('.layout-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.layout === layout);
+            });
+        }
+
+        // ==================== 工具函数 ====================
+        function getLocalDate(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 切换语言
+        function changeLanguage(lang) {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (i18n[lang][key]) {
+                    // 早退确认消息需要特殊处理，稍后会在显示时动态替换
+                    if (key === 'early_leave_confirm_msg') {
+                        // 这里不处理，保留占位符
+                        element.textContent = i18n[lang][key];
+                    } else {
+                        element.textContent = i18n[lang][key];
+                    }
+                }
+            });
+            localStorage.setItem('preferredLanguage', lang);
+            // 重新渲染需要语言的组件
+            renderCalendar(currentCalendarDate.year, currentCalendarDate.month);
+            renderRecords(selectedDate);
+        }
+
+        // 实时更新时间日期
+        function updateDateTime() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('time').textContent = `${h}:${m}:${s}`;
+
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            const dateStr = now.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'zh-CN', options);
+            document.getElementById('date').textContent = dateStr;
+        }
+
+        // ==================== Electron API 调用封装 ====================
+        async function fetchAllRecords() {
+            return await window.electronAPI.getRecords();
+        }
+
+        async function fetchRecordsByDate(date) {
+            return await window.electronAPI.getRecords(date);
+        }
+
+        async function addRecordToServer(type) {
+            return await window.electronAPI.addRecord(type);
+        }
+
+        // ==================== 工具函数 ====================
+        function getLocalMidnight(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d, 0, 0, 0).getTime();
+        }
+
+        function getPreviousDate(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const pd = new Date(y, m - 1, d - 1);
+            return `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}-${String(pd.getDate()).padStart(2, '0')}`;
+        }
+
+        // 计算全天累计工作时长（用于显示和日历颜色）
+        function calculateTotalWorkDuration(dayRecords) {
+            if (dayRecords.length === 0) return 0;
+            let total = 0;
+            let workStart = null;
+            let isOnBreak = false;
+            let breakStart = null;
+
+            dayRecords.sort((a, b) => a.timestamp - b.timestamp).forEach(record => {
+                const ts = record.timestamp * 1000;
+                switch (record.type) {
+                    case 'attend':
+                    case 'late':
+                        if (workStart !== null) {
+                            total += ts - workStart;
+                        }
+                        workStart = ts;
+                        isOnBreak = false;
+                        breakStart = null;
+                        break;
+                    case 'break_start':
+                        if (workStart !== null && !isOnBreak) {
+                            total += ts - workStart;
+                            workStart = null;
+                            isOnBreak = true;
+                            breakStart = ts;
+                        }
+                        break;
+                    case 'break_end':
+                        if (isOnBreak && breakStart !== null) {
+                            workStart = ts;
+                            isOnBreak = false;
+                            breakStart = null;
+                        }
+                        break;
+                    case 'leave':
+                    case 'early_leave':
+                        if (workStart !== null) {
+                            total += ts - workStart;
+                            workStart = null;
+                        }
+                        isOnBreak = false;
+                        breakStart = null;
+                        break;
+                }
+            });
+            return Math.round(total / (1000 * 60));
+        }
+
+        // 计算某一天的工作时长（支持跨天加班：午夜自动结算）
+        function calculateDayWorkDuration(dateStr, recordsByDate) {
+            const dayRecords = recordsByDate[dateStr] || [];
+
+            // 检查前一天是否有未结清的出勤（跨天加班）
+            let carryOver = 0;
+            const prevDate = getPreviousDate(dateStr);
+            const prevRecords = recordsByDate[prevDate] || [];
+
+            if (prevRecords.length > 0) {
+                const sortedPrev = [...prevRecords].sort((a, b) => a.timestamp - b.timestamp);
+                let prevWorkStart = null;
+                for (const rec of sortedPrev) {
+                    if (rec.type === 'attend' || rec.type === 'late') {
+                        prevWorkStart = rec.timestamp * 1000;
+                    } else if (rec.type === 'leave' || rec.type === 'early_leave') {
+                        prevWorkStart = null; // 前一天的加班已结清
+                    }
+                }
+                // 前一天有未结清的加班，累加午夜到第一个退勤的时长
+                if (prevWorkStart !== null) {
+                    const midnightMs = getLocalMidnight(dateStr);
+                    const sortedToday = [...dayRecords].sort((a, b) => a.timestamp - b.timestamp);
+                    for (const rec of sortedToday) {
+                        if (rec.type === 'leave' || rec.type === 'early_leave') {
+                            carryOver = Math.max(0, Math.round((rec.timestamp * 1000 - midnightMs) / 60000));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return carryOver + calculateTotalWorkDuration(dayRecords);
+        }
+
+        // 计算当前工作段的工作时长（从最后一次出勤到现在，扣除中间休息）
+        function calculateCurrentWorkDuration(records, nowTimestamp) {
+            if (!records || records.length === 0) return 0;
+            const sorted = [...records].sort((a, b) => a.timestamp - b.timestamp);
+            // 找到最后一次出勤（attend/late）的索引
+            let lastAttendIndex = -1;
+            for (let i = sorted.length - 1; i >= 0; i--) {
+                if (sorted[i].type === 'attend' || sorted[i].type === 'late') {
+                    lastAttendIndex = i;
+                    break;
+                }
+            }
+            if (lastAttendIndex === -1) return 0;
+
+            let workStart = sorted[lastAttendIndex].timestamp * 1000;
+            let total = 0;
+            let isBreak = false;
+            let breakStart = null;
+
+            for (let i = lastAttendIndex + 1; i < sorted.length; i++) {
+                const rec = sorted[i];
+                const ts = rec.timestamp * 1000;
+                if (!isBreak) {
+                    if (rec.type === 'break_start') {
+                        total += ts - workStart;
+                        isBreak = true;
+                        breakStart = ts;
+                    } else if (rec.type === 'leave' || rec.type === 'early_leave') {
+                        total += ts - workStart;
+                        workStart = null;
+                        break; // 工作段结束
+                    }
+                } else {
+                    if (rec.type === 'break_end') {
+                        isBreak = false;
+                        workStart = ts;
+                        breakStart = null;
+                    } else if (rec.type === 'leave' || rec.type === 'early_leave') {
+                        // 休息中退勤，不计入工作时间
+                        workStart = null;
+                        break;
+                    }
+                }
+            }
+
+            // 如果遍历完仍在工作中且不在休息，加上到当前时间
+            if (workStart !== null && !isBreak) {
+                total += nowTimestamp - workStart;
+            }
+            return Math.round(total / (1000 * 60));
+        }
+
+        // 获取当前工作段时长（封装异步调用）
+        async function getCurrentWorkDuration() {
+            const today = getLocalDate();
+            const todayRecords = await fetchRecordsByDate(today);
+            const now = Date.now();
+            return calculateCurrentWorkDuration(todayRecords, now);
+        }
+
+        // ==================== 按钮状态更新 ====================
+        // 根据当天记录获取当前工作状态和休息状态
+        function getCurrentStatus(records) {
+            let isWorking = false;
+            let inBreak = false;
+            const sorted = [...records].sort((a, b) => a.timestamp - b.timestamp);
+            for (let i = 0; i < sorted.length; i++) {
+                const rec = sorted[i];
+                if (rec.type === 'attend' || rec.type === 'late') {
+                    isWorking = true;
+                    inBreak = false;
+                } else if (rec.type === 'break_start') {
+                    if (isWorking) inBreak = true;
+                } else if (rec.type === 'break_end') {
+                    if (isWorking) inBreak = false;
+                } else if (rec.type === 'leave' || rec.type === 'early_leave') {
+                    isWorking = false;
+                    inBreak = false;
+                }
+            }
+            return { isWorking, inBreak };
+        }
+
+        async function updateButtonStates() {
+            const today = getLocalDate();
+            const todayRecords = await fetchRecordsByDate(today);
+            const { isWorking, inBreak } = getCurrentStatus(todayRecords);
+
+            document.getElementById('shukkin').disabled = isWorking;
+            document.getElementById('taikin').disabled = !isWorking || inBreak;
+            document.getElementById('kyukeiStart').disabled = !isWorking || inBreak;
+            document.getElementById('kyukeiEnd').disabled = !isWorking || !inBreak;
+            document.getElementById('chikoku').disabled = isWorking;
+            document.getElementById('soutai').disabled = !isWorking || inBreak;
+        }
+
+        // ==================== 记录添加（含业务逻辑） ====================
+        async function addRecord(type, isConfirm = false) {
+            if (type === 'leave') {
+                const workMinutes = await getCurrentWorkDuration();
+                if (workMinutes < MIN_WORK_MINUTES) {
+                    document.getElementById('leaveWarningModal').classList.add('visible');
+                    return;
+                }
+            }
+
+            if (type === 'early_leave' && !isConfirm) {
+                const workMinutes = await getCurrentWorkDuration();
+                if (workMinutes < MIN_WORK_MINUTES) {
+                    const hour = Math.floor(workMinutes / 60);
+                    const min = workMinutes % 60;
+                    const lang = localStorage.getItem('preferredLanguage') || 'ja';
+                    const msgEl = document.getElementById('earlyLeaveMsg');
+                    msgEl.textContent = i18n[lang]['early_leave_confirm_msg']
+                        .replace('{hour}', hour).replace('{min}', min);
+                    document.getElementById('earlyLeaveConfirmModal').classList.add('visible');
+                    return;
+                }
+            }
+
+            await addRecordToServer(type);
+
+            await renderTodayRecords();
+            await renderRecords(selectedDate);
+            await renderCalendar(currentCalendarDate.year, currentCalendarDate.month);
+            await updateButtonStates();
+
+            const statusEl = document.getElementById('statusDisplay');
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+            const statusKeys = {
+                'attend': 'status_attended',
+                'leave': 'status_left',
+                'break_start': 'status_break_start',
+                'break_end': 'status_break_end',
+                'late': 'status_late',
+                'early_leave': 'status_early_leave'
+            };
+            statusEl.textContent = i18n[lang][statusKeys[type]];
+            statusEl.classList.add('visible');
+            setTimeout(() => statusEl.classList.remove('visible'), 3000);
+        }
+
+        // ==================== 渲染今日记录 ====================
+        async function renderTodayRecords() {
+            const container = document.getElementById('todayRecords');
+            container.innerHTML = '';
+            const today = getLocalDate();
+            const todayRecords = await fetchRecordsByDate(today);
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+
+            const workMinutes = calculateTotalWorkDuration(todayRecords); // 显示累计总时长
+            const hour = Math.floor(workMinutes / 60);
+            const min = workMinutes % 60;
+            const durationEl = document.createElement('div');
+            durationEl.className = 'record-item';
+            durationEl.style.fontWeight = 'bold';
+            durationEl.style.color = '#2d62b3';
+            durationEl.innerHTML = `
+                <div class="record-type">${lang === 'ja' ? '今日の勤務時間' : '今日工作时长'}</div>
+                <div class="record-time">${hour}時間${min}分</div>
+            `;
+            container.appendChild(durationEl);
+
+            if (todayRecords.length === 0) {
+                const emptyEl = document.createElement('div');
+                emptyEl.style.textAlign = 'center';
+                emptyEl.style.padding = '20px';
+                emptyEl.textContent = lang === 'ja' ? '今日の記録はありません' : '今日暂无记录';
+                container.appendChild(emptyEl);
+                return;
+            }
+
+            todayRecords.sort((a, b) => a.timestamp - b.timestamp).forEach(record => {
+                const item = document.createElement('div');
+                item.className = 'record-item';
+                const typeLabels = {
+                    'attend': i18n[lang].record_attend,
+                    'leave': i18n[lang].record_leave,
+                    'break_start': i18n[lang].record_break_start,
+                    'break_end': i18n[lang].record_break_end,
+                    'late': i18n[lang].record_late,
+                    'early_leave': i18n[lang].record_early_leave
+                };
+                item.innerHTML = `
+                    <div class="record-type">${typeLabels[record.type]}</div>
+                    <div class="record-time">${record.time}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // ==================== 渲染记录列表 ====================
+        async function renderRecords(date) {
+            const container = document.getElementById('allRecords');
+            const titleEl = document.getElementById('recordsTitle');
+            const showAllBtn = document.getElementById('showAllBtn');
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+
+            let recordsToShow = [];
+            let title = i18n[lang].all_records;
+
+            if (date) {
+                recordsToShow = await fetchRecordsByDate(date);
+                const d = new Date(date + 'T00:00:00');
+                const year = d.getFullYear();
+                const month = d.getMonth() + 1;
+                const day = d.getDate();
+                title = `${year}年${month}月${day}日` + (lang === 'ja' ? 'の記録' : '的记录');
+                showAllBtn.style.display = 'inline-block';
+            } else {
+                recordsToShow = await fetchAllRecords();
+                showAllBtn.style.display = 'none';
+            }
+
+            titleEl.textContent = title;
+            container.innerHTML = '';
+
+            if (recordsToShow.length === 0) {
+                const emptyEl = document.createElement('div');
+                emptyEl.style.textAlign = 'center';
+                emptyEl.style.padding = '20px';
+                emptyEl.textContent = lang === 'ja' ? '記録はありません' : '暂无记录';
+                container.appendChild(emptyEl);
+                return;
+            }
+
+            recordsToShow.sort((a, b) => b.timestamp - a.timestamp).forEach(record => {
+                const item = document.createElement('div');
+                item.className = 'record-item';
+                const dateObj = new Date(record.date + 'T00:00:00');
+                const dateStr = dateObj.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'zh-CN');
+                const typeLabels = {
+                    'attend': i18n[lang].record_attend,
+                    'leave': i18n[lang].record_leave,
+                    'break_start': i18n[lang].record_break_start,
+                    'break_end': i18n[lang].record_break_end,
+                    'late': i18n[lang].record_late,
+                    'early_leave': i18n[lang].record_early_leave
+                };
+                item.innerHTML = `
+                    <div class="record-date">${dateStr}</div>
+                    <div class="record-type">${typeLabels[record.type]}</div>
+                    <div class="record-time">${record.time}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // ==================== 渲染日历 ====================
+        async function renderCalendar(year, month) {
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+            const weekdays = i18n[lang].weekdays;
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            document.getElementById('calendarYearMonth').textContent = `${year}年${month}月`;
+
+            const weekdaysEl = document.getElementById('calendarWeekdays');
+            weekdaysEl.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('');
+
+            const todayStr = getLocalDate();
+            const daysEl = document.getElementById('calendarDays');
+            daysEl.innerHTML = '';
+
+            const allRecords = await fetchAllRecords();
+            const recordsByDate = {};
+            allRecords.forEach(r => {
+                if (!recordsByDate[r.date]) recordsByDate[r.date] = [];
+                recordsByDate[r.date].push(r);
+            });
+
+            for (let i = 0; i < firstDay; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day empty';
+                daysEl.appendChild(empty);
+            }
+
+            const MAX_WORK_MINUTES = 720; // 12小时
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+
+                if (selectedDate === dateStr) {
+                    dayDiv.classList.add('selected');
+                } else {
+                    // 如果是今天，不使用颜色标注，使用默认背景色
+                    if (dateStr === todayStr) {
+                        dayDiv.style.backgroundColor = '#f9f9f9';
+                    } else {
+                        const workMinutes = calculateDayWorkDuration(dateStr, recordsByDate);
+                        if (workMinutes > 0) {
+                            const intensity = Math.min(workMinutes / MAX_WORK_MINUTES, 1);
+                            const lightness = 95 - intensity * 45;
+                            dayDiv.style.backgroundColor = `hsl(210, 70%, ${lightness}%)`;
+                        } else {
+                            dayDiv.style.backgroundColor = '#f9f9f9';
+                        }
+                    }
+                }
+
+                if (dateStr === todayStr) {
+                    dayDiv.classList.add('today');
+                }
+
+                dayDiv.textContent = d;
+                dayDiv.dataset.date = dateStr;
+                dayDiv.addEventListener('click', () => {
+                    if (selectedDate !== dateStr) {
+                        selectedDate = dateStr;
+                        renderRecords(selectedDate);
+                        renderCalendar(year, month);
+                    }
+                });
+                daysEl.appendChild(dayDiv);
+            }
+        }
+
+        // ==================== 切换页面 ====================
+        function switchPage(pageId) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.toggle('active', item.getAttribute('data-page') === pageId);
+            });
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.toggle('active', page.id === `page_${pageId}`);
+            });
+            if (pageId === 'records') {
+                renderCalendar(currentCalendarDate.year, currentCalendarDate.month);
+                renderRecords(selectedDate);
+            } else if (pageId === 'holidays') {
+                renderHolidayCalendar(currentHolidayCalendar.year, currentHolidayCalendar.month);
+                renderHolidayList();
+            } else if (pageId === 'dashboard') {
+                renderDashboard();
+            }
+        }
+
+        // ==================== 休假一览页面 ====================
+        let currentHolidayCalendar = {
+            year: new Date().getFullYear(),
+            month: new Date().getMonth() + 1
+        };
+
+        // 日本法定节假日（已禁用）
+        function getJapaneseHolidays(year) {
+            return {};
+        }
+
+        function calculateEquinox(year, month) {
+            // 简单近似：春分3/20-21，秋分9/22-23
+            if (month === 3) {
+                return `${year}-03-20`;
+            } else {
+                return `${year}-09-22`;
+            }
+        }
+
+        function getCustomHolidays() {
+            try {
+                return JSON.parse(localStorage.getItem('customHolidays') || '[]');
+            } catch {
+                return [];
+            }
+        }
+
+        function saveCustomHoliday(date, name) {
+            const holidays = getCustomHolidays();
+            holidays.push({ date, name });
+            localStorage.setItem('customHolidays', JSON.stringify(holidays));
+        }
+
+        function deleteCustomHoliday(date, name) {
+            let holidays = getCustomHolidays();
+            holidays = holidays.filter(h => !(h.date === date && h.name === name));
+            localStorage.setItem('customHolidays', JSON.stringify(holidays));
+        }
+
+        function isHoliday(dateStr, japaneseHolidays, customHolidays) {
+            if (japaneseHolidays[dateStr]) return japaneseHolidays[dateStr];
+            const custom = customHolidays.find(h => h.date === dateStr);
+            if (custom) return custom.name;
+            return null;
+        }
+
+        async function renderHolidayCalendar(year, month) {
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+            const weekdays = i18n[lang].weekdays;
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            document.getElementById('holidayCalendarYearMonth').textContent = `${year}年${month}月`;
+
+            const weekdaysEl = document.getElementById('holidayCalendarWeekdays');
+            weekdaysEl.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('');
+
+            const daysEl = document.getElementById('holidayCalendarDays');
+            daysEl.innerHTML = '';
+
+            const japaneseHolidays = getJapaneseHolidays(year);
+            const customHolidays = getCustomHolidays();
+
+            for (let i = 0; i < firstDay; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'holiday-calendar-day empty';
+                daysEl.appendChild(empty);
+            }
+
+            const todayStr = getLocalDate();
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'holiday-calendar-day';
+                dayDiv.textContent = d;
+
+                const dayOfWeek = new Date(year, month - 1, d).getDay();
+                const holidayName = isHoliday(dateStr, japaneseHolidays, customHolidays);
+
+                if (dateStr === todayStr) {
+                    dayDiv.classList.add('today');
+                } else if (holidayName) {
+                    dayDiv.classList.add('holiday');
+                    dayDiv.title = holidayName;
+                } else if (dayOfWeek === 0) {
+                    dayDiv.classList.add('sunday');
+                } else if (dayOfWeek === 6) {
+                    dayDiv.classList.add('saturday');
+                }
+
+                daysEl.appendChild(dayDiv);
+            }
+        }
+
+        async function renderHolidayList() {
+            const container = document.getElementById('holidayList');
+            const countEl = document.getElementById('holidayCount');
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+            const year = currentHolidayCalendar.year;
+            const japaneseHolidays = getJapaneseHolidays(year);
+            const customHolidays = getCustomHolidays();
+
+            container.innerHTML = '';
+
+            const allHolidays = [];
+            for (const [date, name] of Object.entries(japaneseHolidays)) {
+                allHolidays.push({ date, name, isPreset: true });
+            }
+            customHolidays.filter(h => h.date.startsWith(String(year))).forEach(h => {
+                allHolidays.push({ date: h.date, name: h.name, isPreset: false });
+            });
+
+            allHolidays.sort((a, b) => a.date.localeCompare(b.date));
+
+            // Update count
+            const presetCount = Object.keys(japaneseHolidays).length;
+            const customCount = customHolidays.filter(h => h.date.startsWith(String(year))).length;
+            countEl.textContent = `${presetCount + customCount}件`;
+
+            if (allHolidays.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:30px 20px;color:#999;font-size:13px;">${i18n[lang].no_holidays}</div>`;
+                return;
+            }
+
+            allHolidays.forEach(h => {
+                const item = document.createElement('div');
+                item.className = 'holiday-item';
+                const d = new Date(h.date + 'T00:00:00');
+                const dateStr = d.toLocaleDateString(lang === 'ja' ? 'ja-JP' : 'zh-CN');
+                item.innerHTML = `
+                    <div>
+                        <div class="holiday-name ${h.isPreset ? 'preset' : ''}">${h.name}</div>
+                        <div class="holiday-date">${dateStr}</div>
+                    </div>
+                    ${!h.isPreset ? `<button class="delete-holiday-btn" data-date="${h.date}" data-name="${h.name}">×</button>` : ''}
+                `;
+                container.appendChild(item);
+            });
+
+            container.querySelectorAll('.delete-holiday-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const date = e.target.dataset.date;
+                    const name = e.target.dataset.name;
+                    deleteCustomHoliday(date, name);
+                    renderHolidayList();
+                    renderHolidayCalendar(currentHolidayCalendar.year, currentHolidayCalendar.month);
+                });
+            });
+        }
+
+        async function renderDashboard() {
+            const statsGrid = document.getElementById('dashboardStatsGrid');
+            const weekChart = document.getElementById('weekChart');
+            const summaryList = document.getElementById('summaryList');
+            const lang = localStorage.getItem('preferredLanguage') || 'ja';
+
+            const allRecords = await fetchAllRecords();
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+            const todayStr = getLocalDate();
+
+            // 当月记录
+            const monthRecords = allRecords.filter(r => {
+                const [y, m] = r.date.split('-').map(Number);
+                return y === currentYear && m === currentMonth;
+            });
+
+            // 按日期分组
+            const recordsByDate = {};
+            monthRecords.forEach(r => {
+                if (!recordsByDate[r.date]) recordsByDate[r.date] = [];
+                recordsByDate[r.date].push(r);
+            });
+
+            // 计算当月统计数据
+            let totalMinutes = 0;
+            let workDays = 0;
+            let lateCount = 0;
+            let earlyCount = 0;
+
+            for (const [date, recs] of Object.entries(recordsByDate)) {
+                const dayMinutes = calculateDayWorkDuration(date, recordsByDate);
+                totalMinutes += dayMinutes;
+                if (dayMinutes > 0) workDays++;
+                if (recs.some(r => r.type === 'late')) lateCount++;
+                if (recs.some(r => r.type === 'early_leave')) earlyCount++;
+            }
+
+            const avgMinutes = workDays > 0 ? Math.round(totalMinutes / workDays) : 0;
+            const overtimeMinutes = Math.max(0, totalMinutes - workDays * 480);
+
+            // 渲染统计卡片
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${workDays}</div>
+                    <div class="stat-label">${i18n[lang].stat_work_days}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${Math.floor(totalMinutes / 60)}h${totalMinutes % 60}</div>
+                    <div class="stat-label">${i18n[lang].stat_total_hours}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${Math.floor(avgMinutes / 60)}h${avgMinutes % 60}</div>
+                    <div class="stat-label">${i18n[lang].stat_avg_daily}</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value">${lateCount}</div>
+                    <div class="stat-label">${i18n[lang].stat_late_count}</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value">${earlyCount}</div>
+                    <div class="stat-label">${i18n[lang].stat_early_count}</div>
+                </div>
+                <div class="stat-card alert">
+                    <div class="stat-value">${Math.floor(overtimeMinutes / 60)}h${overtimeMinutes % 60}</div>
+                    <div class="stat-label">${i18n[lang].stat_overtime}</div>
+                </div>
+            `;
+
+            // 本周数据（最近7天）
+            weekChart.innerHTML = '';
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                const dateStr = getLocalDate(date);
+                const dayMinutes = calculateDayWorkDuration(dateStr, recordsByDate);
+                const barHeight = Math.max(4, Math.round(dayMinutes / 480 * 100));
+                const dayLabel = i18n[lang].weekdays[date.getDay()];
+
+                const barContainer = document.createElement('div');
+                barContainer.className = 'week-bar-container';
+                barContainer.innerHTML = `
+                    <div class="week-bar-value">${dayMinutes > 0 ? Math.round(dayMinutes / 60 * 10) / 10 + 'h' : '-'}</div>
+                    <div class="week-bar" style="height:${barHeight}px;"></div>
+                    <div class="week-bar-label">${dayLabel}</div>
+                `;
+                weekChart.appendChild(barContainer);
+            }
+
+            // 月度总结
+            summaryList.innerHTML = `
+                <div class="summary-row">
+                    <span class="label">${i18n[lang].stat_work_days}</span>
+                    <span class="value">${workDays} ${lang === 'ja' ? '日' : '天'}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">${i18n[lang].stat_total_hours}</span>
+                    <span class="value">${Math.floor(totalMinutes / 60)}h${totalMinutes % 60}m</span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">${i18n[lang].stat_avg_daily}</span>
+                    <span class="value">${Math.floor(avgMinutes / 60)}h${avgMinutes % 60}m</span>
+                </div>
+                <div class="summary-row">
+                    <span class="label">${i18n[lang].stat_overtime}</span>
+                    <span class="value">${Math.floor(overtimeMinutes / 60)}h${overtimeMinutes % 60}m</span>
+                </div>
+                <div class="overtime-bar">
+                    <div class="overtime-bar-fill" style="width:${Math.min(100, overtimeMinutes / 480 * 100)}%;"></div>
+                </div>
+            `;
+        }
+
+        // 显示添加休假弹窗
+        function showAddHolidayModal() {
+            const modal = document.getElementById('addHolidayModal');
+            if (modal) {
+                modal.classList.add('visible');
+            }
+        }
+
+        // ==================== 初始化事件监听 ====================
+        function initEventListeners() {
+            // 窗口拖动（修正版：使用 screen 坐标计算增量）
+            let isDragging = false;
+            let lastMouseX, lastMouseY;
+
+            const titlebar = document.getElementById('titlebar');
+            titlebar.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastMouseX = e.screenX;
+                lastMouseY = e.screenY;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.screenX - lastMouseX;
+                    const deltaY = e.screenY - lastMouseY;
+                    if (deltaX !== 0 || deltaY !== 0) {
+                        window.electronAPI.moveWindow(deltaX, deltaY);
+                        lastMouseX = e.screenX;
+                        lastMouseY = e.screenY;
+                    }
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // 关闭按钮
+            document.getElementById('closeBtn').addEventListener('click', () => {
+                window.electronAPI.closeWindow();
+            });
+
+            // 全屏按钮
+            document.getElementById('fullscreenBtn').addEventListener('click', () => {
+                window.electronAPI.fullscreenWindow();
+            });
+
+            // 语言切换
+            document.getElementById('langSelect').addEventListener('change', (e) => {
+                changeLanguage(e.target.value);
+            });
+
+            // 侧边栏导航
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', () => switchPage(item.getAttribute('data-page')));
+            });
+
+
+
+            // 考勤按钮
+            document.getElementById('shukkin').addEventListener('click', () => addRecord('attend'));
+            document.getElementById('taikin').addEventListener('click', () => addRecord('leave'));
+            document.getElementById('kyukeiStart').addEventListener('click', () => addRecord('break_start'));
+            document.getElementById('kyukeiEnd').addEventListener('click', () => addRecord('break_end'));
+            document.getElementById('chikoku').addEventListener('click', () => addRecord('late'));
+            document.getElementById('soutai').addEventListener('click', () => addRecord('early_leave'));
+
+            // 模态窗口关闭
+            document.getElementById('closeLeaveWarningModal').addEventListener('click', () => {
+                document.getElementById('leaveWarningModal').classList.remove('visible');
+            });
+            document.getElementById('cancelEarlyLeave').addEventListener('click', () => {
+                document.getElementById('earlyLeaveConfirmModal').classList.remove('visible');
+            });
+            document.getElementById('confirmEarlyLeave').addEventListener('click', () => {
+                document.getElementById('earlyLeaveConfirmModal').classList.remove('visible');
+                addRecord('early_leave', true);
+            });
+
+            [document.getElementById('leaveWarningModal'), document.getElementById('earlyLeaveConfirmModal')].forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.classList.remove('visible');
+                });
+            });
+
+            // 日历切换
+            document.getElementById('calendarPrev').addEventListener('click', () => {
+                let { year, month } = currentCalendarDate;
+                month--;
+                if (month < 1) {
+                    month = 12;
+                    year--;
+                }
+                currentCalendarDate = { year, month };
+                renderCalendar(year, month);
+            });
+
+            document.getElementById('calendarNext').addEventListener('click', () => {
+                let { year, month } = currentCalendarDate;
+                month++;
+                if (month > 12) {
+                    month = 1;
+                    year++;
+                }
+                currentCalendarDate = { year, month };
+                renderCalendar(year, month);
+            });
+
+            document.getElementById('showAllBtn').addEventListener('click', () => {
+                selectedDate = null;
+                renderRecords(null);
+                renderCalendar(currentCalendarDate.year, currentCalendarDate.month);
+            });
+
+            // 休假日历切换
+            document.getElementById('holidayCalendarPrev').addEventListener('click', () => {
+                let { year, month } = currentHolidayCalendar;
+                month--;
+                if (month < 1) { month = 12; year--; }
+                currentHolidayCalendar = { year, month };
+                renderHolidayCalendar(year, month);
+            });
+            document.getElementById('holidayCalendarNext').addEventListener('click', () => {
+                let { year, month } = currentHolidayCalendar;
+                month++;
+                if (month > 12) { month = 1; year++; }
+                currentHolidayCalendar = { year, month };
+                renderHolidayCalendar(year, month);
+            });
+
+            // 添加休假
+            document.getElementById('addHolidayBtn').addEventListener('click', () => {
+                document.getElementById('addHolidayModal').classList.add('visible');
+            });
+            document.getElementById('cancelAddHoliday').addEventListener('click', () => {
+                document.getElementById('addHolidayModal').classList.remove('visible');
+            });
+            document.getElementById('confirmAddHoliday').addEventListener('click', () => {
+                const date = document.getElementById('holidayDateInput').value;
+                const name = document.getElementById('holidayNameInput').value.trim();
+                if (date && name) {
+                    saveCustomHoliday(date, name);
+                    document.getElementById('addHolidayModal').classList.remove('visible');
+                    document.getElementById('holidayDateInput').value = '';
+                    document.getElementById('holidayNameInput').value = '';
+                    renderHolidayList();
+                    renderHolidayCalendar(currentHolidayCalendar.year, currentHolidayCalendar.month);
+                }
+            });
+            document.getElementById('addHolidayModal').addEventListener('click', (e) => {
+                if (e.target.id === 'addHolidayModal') {
+                    document.getElementById('addHolidayModal').classList.remove('visible');
+                }
+            });
+
+            // 布局设置选项
+            document.querySelectorAll('.layout-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    applyLayout(opt.dataset.layout);
+                });
+            });
+        }
+
+        // ==================== 初始化 ====================
+        async function init() {
+            if (!window.electronAPI) {
+                console.error('electronAPI is not available. Please ensure preload script is properly injected.');
+                return;
+            }
+
+            const savedLang = localStorage.getItem('preferredLanguage') || 'ja';
+            document.getElementById('langSelect').value = savedLang;
+            changeLanguage(savedLang);
+            applyLayout(getLayout());
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            await renderTodayRecords();
+            await renderRecords(selectedDate);
+            const now = new Date();
+            currentCalendarDate = { year: now.getFullYear(), month: now.getMonth() + 1 };
+            await renderCalendar(currentCalendarDate.year, currentCalendarDate.month);
+            await updateButtonStates();
+
+            initEventListeners();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
